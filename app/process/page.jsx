@@ -8,7 +8,7 @@ const steps = [
   {
     title: "Handpicked Fruits",
     desc: "Only the finest fruits are carefully selected by hand at the peak of ripeness from pristine orchards.",
-    image: "/process/handpicked.png",     // ← new name – you can keep /process/farm.jpg too
+    image: "/process/handpicked.png", // ← new name – you can keep /process/farm.jpg too
   },
   {
     title: "Hygienic Processing",
@@ -18,7 +18,7 @@ const steps = [
   {
     title: "Flavor Lock Technique",
     desc: "Advanced gentle processing locks in natural aroma, taste and nutrients without compromise.",
-    image: "/process/flavor-lock.png",    // ← you'll need to create / provide this image
+    image: "/process/flavor-lock.png", // ← you'll need to create / provide this image
   },
   {
     title: "Sealed & Packed",
@@ -32,6 +32,12 @@ export default function MountainRouteProcess() {
   const { scrollYProgress } = useScroll({ target: containerRef });
 
   const [isMobile, setIsMobile] = useState(false);
+  const [roadPathD, setRoadPathD] = useState("");
+
+  useEffect(() => {
+    const el = document.getElementById("roadPath");
+    if (el) setRoadPathD(el.getAttribute("d"));
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
@@ -46,10 +52,13 @@ export default function MountainRouteProcess() {
   const roadProgress = useTransform(
     scrollYProgress,
     isMobile ? [0.05, 0.75] : [0.1, 0.8],
-    [0, 1]
+    [0, 1],
   );
 
-  const smoothProgress = useSpring(roadProgress, { stiffness: 80, damping: 30 });
+  const smoothProgress = useSpring(roadProgress, {
+    stiffness: 80,
+    damping: 30,
+  });
 
   return (
     <main
@@ -72,7 +81,9 @@ export default function MountainRouteProcess() {
           >
             The Journey to
             <br />
-            <span className="italic font-light text-emerald-700">Pure Perfection</span>
+            <span className="italic font-light text-emerald-700">
+              Pure Perfection
+            </span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
@@ -98,7 +109,13 @@ export default function MountainRouteProcess() {
               xmlns="http://www.w3.org/2000/svg"
             >
               <defs>
-                <linearGradient id="roadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <linearGradient
+                  id="roadGradient"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
                   <stop offset="0%" stopColor="#065f46" stopOpacity="0.25" />
                   <stop offset="50%" stopColor="#10b981" stopOpacity="0.45" />
                   <stop offset="100%" stopColor="#047857" stopOpacity="0.25" />
@@ -147,16 +164,49 @@ export default function MountainRouteProcess() {
               {/* Vehicle */}
               <motion.g
                 style={{
-                  offsetPath: `path("${document.getElementById('roadPath')?.getAttribute('d')}")`,
+                  offsetPath: roadPathD ? `path("${roadPathD}")` : undefined,
                   offsetDistance: smoothProgress,
                   offsetRotate: "auto 30deg",
                 }}
               >
-                <circle cx="0" cy="0" r={isMobile ? "14" : "18"} fill="#f59e0b" opacity="0.9" />
-                <circle cx="0" cy="0" r={isMobile ? "9" : "12"} fill="#fbbf24" />
-                <rect x="-12" y="-20" width="24" height="18" rx="4" fill="#ffffff" opacity="0.95" />
-                <rect x="-8" y="-16" width="16" height="10" rx="2" fill="#10b981" />
-                <text x="0" y="-8" textAnchor="middle" fontSize="10" fill="white" fontWeight="bold">
+                <circle
+                  cx="0"
+                  cy="0"
+                  r={isMobile ? "14" : "18"}
+                  fill="#f59e0b"
+                  opacity="0.9"
+                />
+                <circle
+                  cx="0"
+                  cy="0"
+                  r={isMobile ? "9" : "12"}
+                  fill="#fbbf24"
+                />
+                <rect
+                  x="-12"
+                  y="-20"
+                  width="24"
+                  height="18"
+                  rx="4"
+                  fill="#ffffff"
+                  opacity="0.95"
+                />
+                <rect
+                  x="-8"
+                  y="-16"
+                  width="16"
+                  height="10"
+                  rx="2"
+                  fill="#10b981"
+                />
+                <text
+                  x="0"
+                  y="-8"
+                  textAnchor="middle"
+                  fontSize="10"
+                  fill="white"
+                  fontWeight="bold"
+                >
                   J
                 </text>
               </motion.g>
@@ -172,7 +222,11 @@ export default function MountainRouteProcess() {
             });
 
             const yImage = useTransform(sectionProgress, [0, 1], [60, -60]);
-            const opacity = useTransform(sectionProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
+            const opacity = useTransform(
+              sectionProgress,
+              [0, 0.2, 0.8, 1],
+              [0, 1, 1, 0],
+            );
 
             const isEven = i % 2 === 0;
 
@@ -218,8 +272,8 @@ export default function MountainRouteProcess() {
                 </motion.div>
 
                 <motion.div
-  style={{ y: yImage, opacity }}
-  className={`
+                  style={{ y: yImage, opacity }}
+                  className={`
     w-full
     relative overflow-hidden shadow-2xl border border-emerald-200/40 z-10
 
@@ -237,8 +291,7 @@ export default function MountainRouteProcess() {
     ${isEven && !isMobile ? "lg:ml-auto" : ""}
     ${!isEven && !isMobile ? "lg:mr-auto" : ""}
   `}
->
-
+                >
                   <Image
                     src={step.image}
                     alt={step.title}
@@ -266,7 +319,9 @@ export default function MountainRouteProcess() {
         >
           Purity preserved
           <br />
-          <span className="italic font-light text-emerald-700">from orchard to you</span>
+          <span className="italic font-light text-emerald-700">
+            from orchard to you
+          </span>
         </motion.h2>
       </section>
 
