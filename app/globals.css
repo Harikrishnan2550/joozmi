@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+html,
+body {
+  height: auto;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+@font-face {
+  font-family: "Amanojaku";
+  src: url("/fonts/Amanojaku Demo.otf") format("opentype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Grained";
+  src: url("/fonts/Grained-Demo.ttf") format("truetype");
+  font-display: swap;
+}
+
+:root {
+  --font-playfair: "Playfair Display", serif;
+  --font-inter: "Inter", sans-serif;
+}
+
+body {
+  font-family: var(--font-inter);
+}
