@@ -1,19 +1,55 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const easePremium = [0.22, 1, 0.36, 1];
 
 export default function ContactPage() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    message: "",
+  });
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const loading = toast.loading("Sending message...");
+
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      toast.dismiss(loading);
+
+      if (res.ok) {
+        toast.success("Message sent successfully!");
+        setFormData({ name: "", email: "", message: "" });
+      } else {
+        toast.error("Failed to send message.");
+      }
+    } catch (err) {
+      toast.dismiss(loading);
+      toast.error("Something went wrong.");
+    }
+  };
+
   return (
     <main className="relative overflow-hidden">
-      {/* Background */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/60 via-white to-white" />
         <div className="absolute -top-32 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-emerald-200/25 blur-3xl" />
       </div>
 
-      {/* HERO */}
       <section className="pt-32 sm:pt-40 pb-20 text-center px-6">
         <motion.p
           initial={{ opacity: 0, y: 12 }}
@@ -44,11 +80,9 @@ export default function ContactPage() {
         </motion.p>
       </section>
 
-      {/* CONTENT */}
       <section className="pb-28 px-6">
         <div className="mx-auto max-w-6xl grid gap-12 lg:grid-cols-2 items-start">
-          {/* LEFT – CONTACT INFO */}
-          <motion.div
+            <motion.div
             initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
             whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             viewport={{ once: true, amount: 0.3 }}
@@ -103,43 +137,39 @@ export default function ContactPage() {
             </div>
           </motion.div>
 
-          {/* RIGHT – CONTACT FORM */}
-          <motion.div
-            initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
-            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 1, ease: easePremium, delay: 0.05 }}
-            className="rounded-3xl border border-black/10 bg-white/80 backdrop-blur-xl shadow-[0_40px_100px_-60px_rgba(0,0,0,0.35)] p-8 sm:p-10"
-          >
-            <form className="space-y-6">
+          <motion.div className="rounded-3xl border border-black/10 bg-white/80 backdrop-blur-xl shadow-[0_40px_100px_-60px_rgba(0,0,0,0.35)] p-8 sm:p-10">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="text-sm font-medium text-black/70">
-                  Full Name
-                </label>
+                <label className="text-sm font-medium text-black/70">Full Name</label>
                 <input
                   type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
                   placeholder="Your name"
                   className="mt-2 w-full rounded-xl border border-black/10 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-black/70">
-                  Email Address
-                </label>
+                <label className="text-sm font-medium text-black/70">Email Address</label>
                 <input
                   type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
                   placeholder="you@example.com"
                   className="mt-2 w-full rounded-xl border border-black/10 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium text-black/70">
-                  Message
-                </label>
+                <label className="text-sm font-medium text-black/70">Message</label>
                 <textarea
                   rows={5}
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
                   placeholder="Tell us how we can help…"
                   className="mt-2 w-full rounded-xl border border-black/10 px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />

@@ -34,7 +34,6 @@ export default function Navbar() {
   ? "bg-white/80 backdrop-blur-xl border border-black/5 shadow-sm py-3 w-[92%] sm:w-[88%] md:w-auto md:max-w-none mx-auto"
   : "bg-transparent border border-transparent py-5 w-full max-w-6xl"
 }
-
         `}
       >
         <div className="flex items-center w-full justify-between md:justify-center gap-10 lg:gap-20">
@@ -44,7 +43,7 @@ export default function Navbar() {
               src="/logo/gusto.png"
               alt="Gusto"
               className={`transition-all duration-500 brightness-0 ${
-                isScrolled ? "h-6" : "h-7 md:h-8"
+                isScrolled ? "h-10" : "h-7 md:h-8"
               }`}
             />
           </Link>

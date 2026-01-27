@@ -1,6 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const easePremium = [0.22, 1, 0.36, 1];
 
@@ -22,12 +24,22 @@ const container = {
 };
 
 export default function ContactPage() {
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    message: "",
+  });
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
   return (
     <section
       id="contact"
       className="relative overflow-hidden pt-24 pb-24 sm:pt-32 sm:pb-28"
     >
-      {/* ✅ Premium Green Theme Background */}
       <div className="pointer-events-none absolute inset-0">
         <div
           className="absolute inset-0"
@@ -42,23 +54,9 @@ export default function ContactPage() {
             `,
           }}
         />
-
-        <div
-          className="absolute -top-24 left-1/2 h-[560px] w-[560px] -translate-x-1/2 rounded-full blur-3xl opacity-70"
-          style={{ background: "rgba(16,185,129,0.14)" }}
-        />
-        <div
-          className="absolute bottom-[-180px] left-[-160px] h-[520px] w-[520px] rounded-full blur-3xl opacity-60"
-          style={{ background: "rgba(16,185,129,0.10)" }}
-        />
-        <div
-          className="absolute bottom-[-220px] right-[-170px] h-[560px] w-[560px] rounded-full blur-3xl opacity-55"
-          style={{ background: "rgba(16,185,129,0.09)" }}
-        />
       </div>
 
       <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-        {/* HEADER */}
         <motion.div
           variants={container}
           initial="hidden"
@@ -77,8 +75,7 @@ export default function ContactPage() {
             variants={fadeUp}
             className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-black"
           >
-            Let’s talk about{" "}
-            <span className="italic text-black/70">premium pulp</span>
+            Let’s talk about <span className="italic text-black/70">premium pulp</span>
           </motion.h1>
 
           <motion.p
@@ -90,9 +87,7 @@ export default function ContactPage() {
           </motion.p>
         </motion.div>
 
-        {/* GRID */}
         <div className="mt-16 grid gap-10 lg:grid-cols-12">
-          {/* LEFT - INFO */}
           <motion.div
             initial={{ opacity: 0, y: 28, filter: "blur(10px)" }}
             whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -126,75 +121,54 @@ export default function ContactPage() {
               </div>
             </div>
           </motion.div>
-
-          {/* RIGHT - FORM */}
-          <motion.div
-            initial={{ opacity: 0, y: 28, filter: "blur(10px)" }}
-            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            viewport={{ once: true, amount: 0.25 }}
-            transition={{ duration: 1, ease: easePremium, delay: 0.1 }}
-            className="lg:col-span-7"
-          >
+          <motion.div className="lg:col-span-7">
             <div className="relative overflow-hidden rounded-3xl border border-black/10 bg-white/70 backdrop-blur-xl shadow-[0_30px_80px_-55px_rgba(0,0,0,0.25)] p-8 sm:p-10">
-              {/* glow */}
-              <div
-                className="pointer-events-none absolute -inset-20 opacity-30 blur-3xl"
-                style={{
-                  background:
-                    "radial-gradient(circle at 25% 20%, rgba(16,185,129,0.25), transparent 60%)",
-                }}
-              />
-
               <div className="relative">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold tracking-[0.35em] text-black/45 uppercase">
-                    Send Message
-                  </span>
-                  <span className="text-xs text-black/40 tracking-[0.25em] uppercase">
-                    Premium Support
-                  </span>
-                </div>
-
-                <h3 className="mt-6 text-2xl sm:text-3xl font-semibold tracking-tight text-black">
-                  Message us
-                </h3>
-
-                <p className="mt-3 text-sm sm:text-base leading-relaxed text-black/60">
-                  Fill your details and we’ll get back to you.
-                </p>
-
-                {/* ✅ FORM */}
                 <form
                   className="mt-10 grid gap-5"
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
-                    alert("Message submitted ✅ (connect API later)");
+
+                    const loading = toast.loading("Sending message...");
+
+                    try {
+                      const res = await fetch("/api/send-email", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(formData),
+                      });
+
+                      toast.dismiss(loading);
+
+                      if (res.ok) {
+                        toast.success("Message sent successfully!");
+                        setFormData({ name: "", phone: "", email: "", message: "" });
+                      } else {
+                        toast.error("Failed to send message.");
+                      }
+                    } catch {
+                      toast.dismiss(loading);
+                      toast.error("Something went wrong.");
+                    }
                   }}
                 >
                   <div className="grid gap-5 sm:grid-cols-2">
-                    <Input label="Full Name" placeholder="Your name" required />
-                    <Input
-                      label="Phone"
-                      placeholder="Your phone number"
-                      required
-                    />
+                    <Input label="Full Name" name="name" value={formData.name} onChange={handleChange} required />
+                    <Input label="Phone" name="phone" value={formData.phone} onChange={handleChange} required />
                   </div>
 
-                  <Input
-                    label="Email"
-                    type="email"
-                    placeholder="you@email.com"
-                    required
-                  />
+                  <Input label="Email" name="email" value={formData.email} onChange={handleChange} type="email" required />
 
                   <div className="grid gap-2">
                     <label className="text-xs font-semibold tracking-[0.25em] uppercase text-black/50">
                       Message
                     </label>
                     <textarea
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
                       required
                       rows={5}
-                      placeholder="Tell us what you need..."
                       className="w-full rounded-2xl border border-black/10 bg-white/80 px-4 py-4 text-sm text-black/75 outline-none transition focus:border-emerald-500/40 focus:ring-4 focus:ring-emerald-500/15"
                     />
                   </div>
@@ -206,37 +180,36 @@ export default function ContactPage() {
                     type="submit"
                     className="mt-3 inline-flex items-center justify-center gap-3 rounded-full border border-black/10 bg-white/80 px-10 py-4 text-sm font-semibold tracking-[0.25em] uppercase text-black shadow-[0_20px_55px_-40px_rgba(0,0,0,0.35)] backdrop-blur-xl"
                   >
-                    Send Message
-                    <span className="transition-transform duration-500 group-hover:translate-x-1">
-                      →
-                    </span>
+                    Send Message →
                   </motion.button>
                 </form>
               </div>
             </div>
           </motion.div>
         </div>
-
-        {/* bottom bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 16, filter: "blur(10px)" }}
-          whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          viewport={{ once: true, amount: 0.25 }}
-          transition={{ duration: 1, ease: easePremium, delay: 0.1 }}
-          className="mt-16 rounded-3xl border border-black/10 bg-white/60 backdrop-blur-xl px-8 py-8 text-center"
-        >
-          <p className="text-xs font-semibold tracking-[0.35em] uppercase text-black/40">
-            Support & Enquiries
-          </p>
-          <p className="mt-4 text-base sm:text-lg leading-relaxed text-black/65">
-            For bulk orders, distribution, business partnerships and product
-            enquiries — contact us anytime.
-          </p>
-        </motion.div>
       </div>
     </section>
   );
 }
+
+function Input({ label, name, value, onChange, type = "text", required = false }) {
+  return (
+    <div className="grid gap-2">
+      <label className="text-xs font-semibold tracking-[0.25em] uppercase text-black/50">
+        {label}
+      </label>
+      <input
+        required={required}
+        name={name}
+        value={value}
+        onChange={onChange}
+        type={type}
+        className="w-full rounded-2xl border border-black/10 bg-white/80 px-4 py-4 text-sm text-black/75 outline-none transition focus:border-emerald-500/40 focus:ring-4 focus:ring-emerald-500/15"
+      />
+    </div>
+  );
+}
+
 
 function InfoRow({ label, value }) {
   return (
@@ -247,22 +220,6 @@ function InfoRow({ label, value }) {
       <span className="text-sm font-semibold text-black/70 text-right">
         {value}
       </span>
-    </div>
-  );
-}
-
-function Input({ label, type = "text", placeholder, required = false }) {
-  return (
-    <div className="grid gap-2">
-      <label className="text-xs font-semibold tracking-[0.25em] uppercase text-black/50">
-        {label}
-      </label>
-      <input
-        required={required}
-        type={type}
-        placeholder={placeholder}
-        className="w-full rounded-2xl border border-black/10 bg-white/80 px-4 py-4 text-sm text-black/75 outline-none transition focus:border-emerald-500/40 focus:ring-4 focus:ring-emerald-500/15"
-      />
     </div>
   );
 }
