@@ -7,38 +7,15 @@
   /* ------------------------------------------------------------------ */
   /* PRODUCTS DATA (you can later move this to a separate file) */
   /* ------------------------------------------------------------------ */
-  const products = [
-    {
-      title: "Mango",
-      description: "Rich, golden mango pulp crafted from farm-fresh Alphonso mangoes.",
-      image: "/products/mango2.png",
-    },
-    {
-      title: "Strawberry",
-      description: "Sweet and tangy strawberry pulp with a smooth premium finish.",
-      image: "/products/strawberry2.png",
-    },
-    {
-      title: "Tender Coconut",
-      description: "Naturally refreshing tender coconut pulp with real coconut taste.",
-      image: "/products/tender-coconut1.png",
-    },
-    {
-      title: "Chikku",
-      description: "Creamy chikku pulp packed with natural sweetness.",
-      image: "/products/chikku1.png",
-    },
-    {
-      title: "Avocado",
-      description: "Smooth avocado pulp perfect for premium blends and desserts.",
-      image: "/products/avocado1.png",
-    },
-    {
-      title: "Custard Apple",
-      description: "Exotic custard apple pulp with authentic tropical flavour.",
-      image: "/products/custard-apple1.png",
-    },
-  ];
+const products = [
+  { title: "Mango", description: "Rich Alphonso mango pulp.", image: "/products/mango2.png" },
+  { title: "Strawberry", description: "Sweet-tangy strawberry pulp.", image: "/products/strawberry2.png" },
+  { title: "Tender Coconut", description: "Pure tender coconut pulp.", image: "/products/tender-coconut1.png" },
+  { title: "Chikku", description: "Creamy natural chikku pulp.", image: "/products/chikku1.png" },
+  { title: "Avocado", description: "Smooth premium avocado pulp.", image: "/products/avocado1.png" },
+  { title: "Custard Apple", description: "Exotic custard apple pulp.", image: "/products/custard-apple1.png" },
+];
+  
 
   /* ------------------------------------------------------------------ */
   /* PAGE */
