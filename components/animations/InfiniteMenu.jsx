@@ -16,13 +16,13 @@ uniform mat4 uProjectionMatrix;
 uniform vec3 uCameraPosition;
 uniform vec4 uRotationAxisVelocity;
 
-attribute vec3 aModelPosition;
-attribute vec2 aModelUvs;
-attribute mat4 aInstanceMatrix;
+in vec3 aModelPosition;
+in vec2 aModelUvs;
+in mat4 aInstanceMatrix;
 
-varying vec2 vUvs;
-varying float vAlpha;
-varying float vInstanceId;   // float because WebGL1 has no flat int varyings
+out vec2 vUvs;
+out float vAlpha;
+flat out float vInstanceId;
 
 #define PI 3.141593
 
@@ -49,8 +49,7 @@ void main() {
 
     vAlpha = smoothstep(0.5, 1.0, normalize(worldPosition.xyz).z) * 0.9 + 0.1;
     vUvs = aModelUvs;
-
-    vInstanceId = float(gl_InstanceID); // still works with ANGLE_instanced_arrays
+    vInstanceId = float(gl_InstanceID);
 }
 `;
 
@@ -61,9 +60,11 @@ uniform sampler2D uTex;
 uniform float uItemCount;
 uniform float uAtlasSize;
 
-varying vec2 vUvs;
-varying float vAlpha;
-varying float vInstanceId;
+in vec2 vUvs;
+in float vAlpha;
+flat in float vInstanceId;
+
+out vec4 outColor;
 
 void main() {
     float itemIndex = mod(vInstanceId, uItemCount);
@@ -78,12 +79,11 @@ void main() {
     vec2 st = vec2(vUvs.x, 1.0 - vUvs.y);
     st = st * cellSize + cellOffset;
 
-    vec4 color = texture2D(uTex, st);
+    vec4 color = texture(uTex, st);
     color.a *= vAlpha;
 
-    gl_FragColor = color;
+    outColor = color;
 }
-
 `;
 
 /* =========================
@@ -354,38 +354,48 @@ function createAndSetupTexture(gl, minFilter, magFilter, wrapS, wrapT) {
 ========================= */
 
 class ArcballControl {
-  // ... (unchanged – keeping it short)
-  isPointerDown = false;
-  orientation = quat.create();
-  pointerRotation = quat.create();
-  rotationVelocity = 0;
-  rotationAxis = vec3.fromValues(1, 0, 0);
-  snapDirection = vec3.fromValues(0, 0, -1);
-  snapTargetDirection;
-  EPSILON = 0.1;
-  IDENTITY_QUAT = quat.create();
-
   constructor(canvas, updateCallback) {
     this.canvas = canvas;
-    this.updateCallback = updateCallback || (() => {});
+    this.updateCallback = updateCallback || (function() {});
 
     this.pointerPos = vec2.create();
     this.previousPointerPos = vec2.create();
     this._rotationVelocity = 0;
     this._combinedQuat = quat.create();
+    
+    this.isPointerDown = false;
+    this.orientation = quat.create();
+    this.pointerRotation = quat.create();
+    this.rotationVelocity = 0;
+    this.rotationAxis = vec3.fromValues(1, 0, 0);
+    this.snapDirection = vec3.fromValues(0, 0, -1);
+    this.snapTargetDirection = null;
+    this.EPSILON = 0.1;
+    this.IDENTITY_QUAT = quat.create();
 
     canvas.addEventListener("pointerdown", (e) => {
       vec2.set(this.pointerPos, e.clientX, e.clientY);
       vec2.copy(this.previousPointerPos, this.pointerPos);
       this.isPointerDown = true;
+      canvas.style.cursor = "grabbing";
     });
-    canvas.addEventListener("pointerup", () => { this.isPointerDown = false; });
-    canvas.addEventListener("pointerleave", () => { this.isPointerDown = false; });
+    
+    canvas.addEventListener("pointerup", () => { 
+      this.isPointerDown = false;
+      canvas.style.cursor = "grab";
+    });
+    
+    canvas.addEventListener("pointerleave", () => { 
+      this.isPointerDown = false;
+      canvas.style.cursor = "grab";
+    });
+    
     canvas.addEventListener("pointermove", (e) => {
       if (this.isPointerDown) vec2.set(this.pointerPos, e.clientX, e.clientY);
     });
 
     canvas.style.touchAction = "none";
+    canvas.style.cursor = "grab";
   }
 
   update(deltaTime, targetFrameDuration = 16) {
@@ -403,8 +413,8 @@ class ArcballControl {
       if (vec2.sqrLen(midPointerPos) > this.EPSILON) {
         vec2.add(midPointerPos, this.previousPointerPos, midPointerPos);
 
-        const p = this.#project(midPointerPos);
-        const q = this.#project(this.previousPointerPos);
+        const p = this._project(midPointerPos);
+        const q = this._project(this.previousPointerPos);
         const a = vec3.normalize(vec3.create(), p);
         const b = vec3.normalize(vec3.create(), q);
 
@@ -464,7 +474,7 @@ class ArcballControl {
     return { q: out, axis, angle };
   }
 
-  #project(pos) {
+  _project(pos) {
     const r = 2;
     const w = this.canvas.clientWidth;
     const h = this.canvas.clientHeight;
@@ -490,126 +500,110 @@ class ArcballControl {
 ========================= */
 
 class InfiniteGridMenu {
-  TARGET_FRAME_DURATION = 1000 / 60;
-  SPHERE_RADIUS = 2;
-
-  _stopped = false;
-  stop() {
-    this._stopped = true;
-    try {
-      this.gl?.getExtension("WEBGL_lose_context")?.loseContext();
-    } catch {}
-  }
-
-  #time = 0;
-  #deltaTime = 0;
-  #deltaFrames = 0;
-  #frames = 0;
-
-  camera = {
-    matrix: mat4.create(),
-    near: 0.1,
-    far: 40,
-    fov: Math.PI / 4,
-    aspect: 1,
-    position: vec3.fromValues(0, 0, 3),
-    up: vec3.fromValues(0, 1, 0),
-    matrices: {
-      view: mat4.create(),
-      projection: mat4.create(),
-      inversProjection: mat4.create(),
-    },
-  };
-
-  smoothRotationVelocity = 0;
-  scaleFactor = 1.0;
-  movementActive = false;
-
   constructor(canvas, items, onActiveItemChange, onMovementChange, onInit = null, scale = 1.0) {
     this.canvas = canvas;
     this.items = items || [];
-    this.onActiveItemChange = onActiveItemChange || (() => {});
-    this.onMovementChange = onMovementChange || (() => {});
+    this.onActiveItemChange = onActiveItemChange || (function() {});
+    this.onMovementChange = onMovementChange || (function() {});
     this.scaleFactor = scale;
-    this.camera.position[2] = 3 * scale;
-    this.#init(onInit);
-  }
+    
+    this.TARGET_FRAME_DURATION = 1000 / 60;
+    this.SPHERE_RADIUS = 2;
+    
+    this._time = 0;
+    this._deltaTime = 0;
+    this._deltaFrames = 0;
+    this._frames = 0;
+    this._stopped = false;
 
-  resize() {
-    const gl = this.gl;
-    if (!gl) return;
-
-    const needsResize = resizeCanvasToDisplaySize(gl.canvas);
-    if (needsResize) {
-      gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-    }
-
-    this.#updateProjectionMatrix();
-  }
-
-  run(time = 0) {
-    if (this._stopped) return;
-
-    this.#deltaTime = Math.min(32, time - this.#time);
-    this.#time = time;
-    this.#deltaFrames = this.#deltaTime / this.TARGET_FRAME_DURATION;
-    this.#frames += this.#deltaFrames;
-
-    this.#animate(this.#deltaTime);
-    this.#render();
-
-    requestAnimationFrame((t) => this.run(t));
-  }
-
-  #init(onInit) {
-    // Get WebGL2 context
-this.gl =
-  this.canvas.getContext("webgl2", { antialias: true, alpha: true }) ||
-  this.canvas.getContext("webgl", { antialias: true, alpha: true });
-
-    if (!this.gl) {
-      console.warn("WebGL2 not supported — InfiniteMenu disabled");
-      return;
-    }
-
-    const gl = this.gl;
-
-    // Create shader program **here** where gl is defined
-    this.discProgram = createProgram(
-      gl,
-      [discVertShaderSource, discFragShaderSource],
-      null,
-      {
-        aModelPosition: 0,
-        aModelNormal: 1,
-        aModelUvs: 2,
-        aInstanceMatrix: 3,
-      }
-    );
-
-    if (!this.discProgram) {
-      console.warn("Shader program failed — InfiniteMenu disabled");
-      return;
-    }
-
-    // Locations
-    this.discLocations = {
-      aModelPosition: gl.getAttribLocation(this.discProgram, "aModelPosition"),
-      aModelUvs: gl.getAttribLocation(this.discProgram, "aModelUvs"),
-      aInstanceMatrix: gl.getAttribLocation(this.discProgram, "aInstanceMatrix"),
-
-      uWorldMatrix: gl.getUniformLocation(this.discProgram, "uWorldMatrix"),
-      uViewMatrix: gl.getUniformLocation(this.discProgram, "uViewMatrix"),
-      uProjectionMatrix: gl.getUniformLocation(this.discProgram, "uProjectionMatrix"),
-      uCameraPosition: gl.getUniformLocation(this.discProgram, "uCameraPosition"),
-      uRotationAxisVelocity: gl.getUniformLocation(this.discProgram, "uRotationAxisVelocity"),
-
-      uTex: gl.getUniformLocation(this.discProgram, "uTex"),
-      uItemCount: gl.getUniformLocation(this.discProgram, "uItemCount"),
-      uAtlasSize: gl.getUniformLocation(this.discProgram, "uAtlasSize"),
+    this.camera = {
+      matrix: mat4.create(),
+      near: 0.1,
+      far: 40,
+      fov: Math.PI / 4,
+      aspect: 1,
+      position: vec3.fromValues(0, 0, 3 * scale),
+      up: vec3.fromValues(0, 1, 0),
+      matrices: {
+        view: mat4.create(),
+        projection: mat4.create(),
+        inversProjection: mat4.create(),
+      },
     };
 
-    // Geometry
+    this.smoothRotationVelocity = 0;
+    this.movementActive = false;
+
+    this._initWebGL();
+    if (this.gl && onInit) {
+      onInit(this);
+    }
+  }
+
+  _initWebGL() {
+    try {
+      this.gl = this.canvas.getContext("webgl2", { 
+        antialias: true, 
+        alpha: true,
+        preserveDrawingBuffer: false,
+        powerPreference: "high-performance"
+      });
+
+      if (!this.gl) {
+        console.warn("WebGL2 not supported — InfiniteMenu disabled safely");
+        return;
+      }
+
+      this.discProgram = createProgram(
+        this.gl,
+        [discVertShaderSource, discFragShaderSource],
+        null,
+        {
+          aModelPosition: 0,
+          aModelUvs: 1,
+          aInstanceMatrix: 2,
+        }
+      );
+
+      if (!this.discProgram) {
+        console.warn("Shader program failed — InfiniteMenu disabled");
+        this.gl = null;
+        return;
+      }
+
+      this.gl.useProgram(this.discProgram);
+      
+      this.discLocations = {
+        aModelPosition: this.gl.getAttribLocation(this.discProgram, "aModelPosition"),
+        aModelUvs: this.gl.getAttribLocation(this.discProgram, "aModelUvs"),
+        aInstanceMatrix: this.gl.getAttribLocation(this.discProgram, "aInstanceMatrix"),
+
+        uWorldMatrix: this.gl.getUniformLocation(this.discProgram, "uWorldMatrix"),
+        uViewMatrix: this.gl.getUniformLocation(this.discProgram, "uViewMatrix"),
+        uProjectionMatrix: this.gl.getUniformLocation(this.discProgram, "uProjectionMatrix"),
+        uCameraPosition: this.gl.getUniformLocation(this.discProgram, "uCameraPosition"),
+        uRotationAxisVelocity: this.gl.getUniformLocation(this.discProgram, "uRotationAxisVelocity"),
+
+        uTex: this.gl.getUniformLocation(this.discProgram, "uTex"),
+        uItemCount: this.gl.getUniformLocation(this.discProgram, "uItemCount"),
+        uAtlasSize: this.gl.getUniformLocation(this.discProgram, "uAtlasSize"),
+      };
+
+      this._initGeometry();
+      this._initTexture();
+      this.control = new ArcballControl(this.canvas, (deltaTime) => this._onControlUpdate(deltaTime));
+      this._updateCameraMatrix();
+      this.resize();
+
+    } catch (error) {
+      console.error("Failed to initialize WebGL:", error);
+      this.gl = null;
+    }
+  }
+
+  _initGeometry() {
+    const gl = this.gl;
+    
     this.discGeo = new DiscGeometry(56, 1);
     this.discBuffers = this.discGeo.data;
 
@@ -622,88 +616,200 @@ this.gl =
       this.discBuffers.indices
     );
 
-    // Icosahedron instances
     this.icoGeo = new IcosahedronGeometry();
     this.icoGeo.subdivide(1).spherize(this.SPHERE_RADIUS);
-
     this.instancePositions = this.icoGeo.vertices.map((v) => v.position);
     this.DISC_INSTANCE_COUNT = this.icoGeo.vertices.length;
 
-    this.#initDiscInstances(this.DISC_INSTANCE_COUNT);
-
-    // World & texture
     this.worldMatrix = mat4.create();
-    this.#initTexture();
-
-    // Controls
-    this.control = new ArcballControl(this.canvas, (deltaTime) => this.#onControlUpdate(deltaTime));
-
-    // Camera
-    this.#updateCameraMatrix();
-    this.#updateProjectionMatrix();
-    this.resize();
-
-    if (onInit) onInit(this);
+    this._initDiscInstances();
   }
 
-  #initTexture() {
+  _initTexture() {
     const gl = this.gl;
-    this.tex = createAndSetupTexture(gl, gl.LINEAR, gl.LINEAR, gl.CLAMP_TO_EDGE, gl.CLAMP_TO_EDGE);
+    
+    this.tex = createAndSetupTexture(
+      gl, 
+      gl.LINEAR, 
+      gl.LINEAR, 
+      gl.CLAMP_TO_EDGE, 
+      gl.CLAMP_TO_EDGE
+    );
 
     const itemCount = Math.max(1, this.items.length);
     this.atlasSize = Math.ceil(Math.sqrt(itemCount));
 
-    const atlasCanvas = document.createElement("canvas");
-    const ctx = atlasCanvas.getContext("2d");
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-
-    const cellSize = 1024;
-    atlasCanvas.width = this.atlasSize * cellSize;
-    atlasCanvas.height = this.atlasSize * cellSize;
-
-    Promise.all(
-      this.items.map(
-        (item) =>
-          new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = () => resolve(img);
-            img.onerror = () => resolve(null);
-            img.src = item.image;
-          })
-      )
-    ).then((images) => {
-      images.forEach((img, i) => {
-        const x = (i % this.atlasSize) * cellSize;
-        const y = Math.floor(i / this.atlasSize) * cellSize;
-
-        if (img) {
-          const iw = img.width;
-          const ih = img.height;
-          const scale = Math.min(cellSize / iw, cellSize / ih);
-          const dw = iw * scale;
-          const dh = ih * scale;
-          const dx = x + (cellSize - dw) / 2;
-          const dy = y + (cellSize - dh) / 2;
-
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(x, y, cellSize, cellSize);
-          ctx.drawImage(img, dx, dy, dw, dh);
-        } else {
-          ctx.fillStyle = "#f1f5f9";
-          ctx.fillRect(x, y, cellSize, cellSize);
-        }
-      });
-
-      gl.bindTexture(gl.TEXTURE_2D, this.tex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
-      gl.generateMipmap(gl.TEXTURE_2D);
-    });
+    const placeholderSize = 512;
+    const placeholderCanvas = document.createElement("canvas");
+    placeholderCanvas.width = placeholderSize;
+    placeholderCanvas.height = placeholderSize;
+    const ctx = placeholderCanvas.getContext("2d");
+    
+    const gradient = ctx.createLinearGradient(0, 0, placeholderSize, placeholderSize);
+    gradient.addColorStop(0, '#f1f5f9');
+    gradient.addColorStop(1, '#e2e8f0');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, placeholderSize, placeholderSize);
+    
+    ctx.fillStyle = '#64748b';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Loading...', placeholderSize/2, placeholderSize/2);
+    
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      placeholderCanvas
+    );
+    
+    if (this.items.length > 0) {
+      this._loadProductImages();
+    }
   }
 
-  #initDiscInstances(count) {
+ _loadProductImages() {
+  const gl = this.gl;
+  const itemCount = Math.max(1, this.items.length);
+  const atlasSize = Math.ceil(Math.sqrt(itemCount));
+  
+  // Use larger cell size to preserve quality
+  const cellSize = 1024; // Increased from 512 to preserve quality
+  const totalSize = atlasSize * cellSize;
+
+  const atlasCanvas = document.createElement("canvas");
+  atlasCanvas.width = totalSize;
+  atlasCanvas.height = totalSize;
+  const ctx = atlasCanvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  // Create transparent background instead of white
+  ctx.clearRect(0, 0, totalSize, totalSize);
+
+  let loadedCount = 0;
+  const totalItems = this.items.length;
+
+  const loadNextImage = (index) => {
+    if (index >= totalItems) {
+      this._uploadTextureToGPU(atlasCanvas);
+      return;
+    }
+
+    const item = this.items[index];
+    const img = new Image();
+    
+    img.onload = () => {
+      console.log(`✅ Image loaded: ${item.image} (${img.width}x${img.height})`);
+      
+      const x = (index % atlasSize) * cellSize;
+      const y = Math.floor(index / atlasSize) * cellSize;
+      
+      // Calculate scaling while maintaining aspect ratio
+      const maxWidth = cellSize * 0.9; // 90% of cell to add padding
+      const maxHeight = cellSize * 0.9;
+      
+      let width = img.width;
+      let height = img.height;
+      
+      // Calculate aspect ratio
+      const aspectRatio = width / height;
+      
+      if (width > maxWidth) {
+        width = maxWidth;
+        height = width / aspectRatio;
+      }
+      
+      if (height > maxHeight) {
+        height = maxHeight;
+        width = height * aspectRatio;
+      }
+      
+      // Center the image in the cell
+      const offsetX = (cellSize - width) / 2;
+      const offsetY = (cellSize - height) / 2;
+      
+      // Draw image with padding and maintaining aspect ratio
+      ctx.drawImage(img, x + offsetX, y + offsetY, width, height);
+      
+      loadedCount++;
+      loadNextImage(index + 1);
+    };
+
+    img.onerror = (err) => {
+      console.warn("❌ Failed to load image:", item.image, err);
+      
+      const x = (index % atlasSize) * cellSize;
+      const y = Math.floor(index / atlasSize) * cellSize;
+      
+      // Draw a placeholder
+      ctx.fillStyle = this._getPlaceholderColor(index);
+      ctx.fillRect(x, y, cellSize, cellSize);
+      
+      // Draw product name
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 32px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(item.title, x + cellSize/2, y + cellSize/2);
+      
+      loadedCount++;
+      loadNextImage(index + 1);
+    };
+
+    let imageUrl = item.image;
+    
+    if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+      imageUrl = '/' + imageUrl;
+    }
+    
+    console.log("📥 Attempting to load image:", imageUrl);
+    
+    img.crossOrigin = "anonymous";
+    img.src = imageUrl;
+  };
+
+  loadNextImage(0);
+}
+
+  _getPlaceholderColor(index) {
+    const colors = [
+      "#FFE5B4",
+      "#FFD1DC",
+      "#E6E6FA",
+      "#B0E0E6",
+      "#98FB98",
+      "#FFDAB9",
+    ];
+    return colors[index % colors.length];
+  }
+
+  _uploadTextureToGPU(atlasCanvas) {
     const gl = this.gl;
+    console.log("📤 Uploading texture atlas to GPU...");
+    
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      atlasCanvas
+    );
+    
+    console.log("✅ Texture atlas uploaded successfully");
+    this.textureReady = true;
+  }
+
+  _initDiscInstances() {
+    const gl = this.gl;
+    const count = this.DISC_INSTANCE_COUNT;
+    
     this.discInstances = {
       matricesArray: new Float32Array(count * 16),
       matrices: [],
@@ -724,10 +830,8 @@ this.gl =
     gl.bindBuffer(gl.ARRAY_BUFFER, this.discInstances.buffer);
     gl.bufferData(gl.ARRAY_BUFFER, this.discInstances.matricesArray.byteLength, gl.DYNAMIC_DRAW);
 
-    const mat4AttribSlotCount = 4;
     const bytesPerMatrix = 16 * 4;
-
-    for (let j = 0; j < mat4AttribSlotCount; ++j) {
+    for (let j = 0; j < 4; ++j) {
       const loc = this.discLocations.aInstanceMatrix + j;
       gl.enableVertexAttribArray(loc);
       gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, bytesPerMatrix, j * 4 * 4);
@@ -738,8 +842,34 @@ this.gl =
     gl.bindVertexArray(null);
   }
 
-  #animate(deltaTime) {
-    const gl = this.gl;
+  resize() {
+    if (!this.gl) return;
+
+    const needsResize = resizeCanvasToDisplaySize(this.gl.canvas);
+    if (needsResize) {
+      this.gl.viewport(0, 0, this.gl.drawingBufferWidth, this.gl.drawingBufferHeight);
+    }
+
+    this._updateProjectionMatrix();
+  }
+
+  run(time = 0) {
+    if (this._stopped || !this.gl) return;
+
+    this._deltaTime = Math.min(32, time - this._time);
+    this._time = time;
+    this._deltaFrames = this._deltaTime / this.TARGET_FRAME_DURATION;
+    this._frames += this._deltaFrames;
+
+    this._animate(this._deltaTime);
+    this._render();
+
+    requestAnimationFrame((t) => this.run(t));
+  }
+
+  _animate(deltaTime) {
+    if (!this.gl) return;
+
     this.control.update(deltaTime, this.TARGET_FRAME_DURATION);
 
     const positions = this.instancePositions.map((p) =>
@@ -761,24 +891,29 @@ this.gl =
       mat4.copy(this.discInstances.matrices[ndx], matrix);
     });
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.discInstances.buffer);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.discInstances.matricesArray);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.discInstances.buffer);
+    this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, this.discInstances.matricesArray);
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
 
     this.smoothRotationVelocity = this.control.rotationVelocity;
   }
 
-  #render() {
+  _render() {
+    if (!this.gl) return;
+
     const gl = this.gl;
 
     gl.useProgram(this.discProgram);
 
     gl.enable(gl.CULL_FACE);
     gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    // Set uniforms with correct types
     gl.uniformMatrix4fv(this.discLocations.uWorldMatrix, false, this.worldMatrix);
     gl.uniformMatrix4fv(this.discLocations.uViewMatrix, false, this.camera.matrices.view);
     gl.uniformMatrix4fv(this.discLocations.uProjectionMatrix, false, this.camera.matrices.projection);
@@ -790,12 +925,23 @@ this.gl =
       this.control.rotationAxis[0], this.control.rotationAxis[1], this.control.rotationAxis[2],
       this.smoothRotationVelocity * 1.1);
 
-    gl.uniform1i(this.discLocations.uItemCount, this.items.length || 1);
-    gl.uniform1i(this.discLocations.uAtlasSize, this.atlasSize || 1);
+    // FIXED: Use gl.uniform1f for float uniforms
+    if (this.discLocations.uItemCount !== -1) {
+      gl.uniform1f(this.discLocations.uItemCount, this.items.length || 1);
+    }
+    
+    if (this.discLocations.uAtlasSize !== -1) {
+      gl.uniform1f(this.discLocations.uAtlasSize, this.atlasSize || 1);
+    }
 
+    // Bind texture
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    if (this.discLocations.uTex !== -1) {
+      gl.uniform1i(this.discLocations.uTex, 0);
+    }
 
+    // Draw
     gl.bindVertexArray(this.discVAO);
     gl.drawElementsInstanced(
       gl.TRIANGLES,
@@ -804,16 +950,20 @@ this.gl =
       0,
       this.DISC_INSTANCE_COUNT
     );
+
+    gl.bindVertexArray(null);
   }
 
-  #updateCameraMatrix() {
+  _updateCameraMatrix() {
     mat4.targetTo(this.camera.matrix, this.camera.position, [0, 0, 0], this.camera.up);
     mat4.invert(this.camera.matrices.view, this.camera.matrix);
   }
 
-  #updateProjectionMatrix() {
-    const gl = this.gl;
-    this.camera.aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+  _updateProjectionMatrix() {
+    if (!this.gl) return;
+
+    const canvas = this.gl.canvas;
+    this.camera.aspect = canvas.clientWidth / canvas.clientHeight;
     const height = this.SPHERE_RADIUS * 0.35;
     const distance = this.camera.position[2];
 
@@ -827,7 +977,9 @@ this.gl =
     mat4.invert(this.camera.matrices.inversProjection, this.camera.matrices.projection);
   }
 
-  #onControlUpdate(deltaTime) {
+  _onControlUpdate(deltaTime) {
+    if (!this.gl) return;
+
     const timeScale = deltaTime / this.TARGET_FRAME_DURATION + 0.0001;
     let damping = 5 / timeScale;
     let cameraTargetZ = 3 * this.scaleFactor;
@@ -836,15 +988,19 @@ this.gl =
 
     if (isMoving !== this.movementActive) {
       this.movementActive = isMoving;
-      this.onMovementChange(isMoving);
+      if (this.onMovementChange) {
+        this.onMovementChange(isMoving);
+      }
     }
 
     if (!this.control.isPointerDown) {
-      const nearestVertexIndex = this.#findNearestVertexIndex();
+      const nearestVertexIndex = this._findNearestVertexIndex();
       const itemIndex = nearestVertexIndex % Math.max(1, this.items.length);
-      this.onActiveItemChange(itemIndex);
+      if (this.onActiveItemChange) {
+        this.onActiveItemChange(itemIndex);
+      }
 
-      const snapDirection = vec3.normalize(vec3.create(), this.#getVertexWorldPosition(nearestVertexIndex));
+      const snapDirection = vec3.normalize(vec3.create(), this._getVertexWorldPosition(nearestVertexIndex));
       this.control.snapTargetDirection = snapDirection;
     } else {
       cameraTargetZ += this.control.rotationVelocity * 80 + 2.5;
@@ -852,10 +1008,10 @@ this.gl =
     }
 
     this.camera.position[2] += (cameraTargetZ - this.camera.position[2]) / damping;
-    this.#updateCameraMatrix();
+    this._updateCameraMatrix();
   }
 
-  #findNearestVertexIndex() {
+  _findNearestVertexIndex() {
     const n = this.control.snapDirection;
     const inversOrientation = quat.conjugate(quat.create(), this.control.orientation);
     const nt = vec3.transformQuat(vec3.create(), n, inversOrientation);
@@ -873,9 +1029,20 @@ this.gl =
     return nearestVertexIndex;
   }
 
-  #getVertexWorldPosition(index) {
+  _getVertexWorldPosition(index) {
     const nearestVertexPos = this.instancePositions[index];
     return vec3.transformQuat(vec3.create(), nearestVertexPos, this.control.orientation);
+  }
+
+  stop() {
+    this._stopped = true;
+    try {
+      if (this.gl && this.gl.getExtension("WEBGL_lose_context")) {
+        this.gl.getExtension("WEBGL_lose_context").loseContext();
+      }
+    } catch (e) {
+      // Ignore
+    }
   }
 }
 
@@ -883,12 +1050,36 @@ this.gl =
    DEFAULT FALLBACK
 ========================= */
 
-const defaultItems = [
+const defaultProducts = [
   {
-    image: "https://picsum.photos/900/900?grayscale",
-    link: "#",
-    title: "Preview",
-    description: "Add product images",
+    title: "Mango",
+    description: "Rich Alphonso mango pulp.",
+    image: "/products/mango2.png"
+  },
+  {
+    title: "Strawberry",
+    description: "Sweet-tangy strawberry pulp.",
+    image: "/products/strawberry2.png"
+  },
+  {
+    title: "Tender Coconut",
+    description: "Pure tender coconut pulp.",
+    image: "/products/tender-coconut1.png"
+  },
+  {
+    title: "Chikku",
+    description: "Creamy natural chikku pulp.",
+    image: "/products/chikku1.png"
+  },
+  {
+    title: "Avocado",
+    description: "Smooth premium avocado pulp.",
+    image: "/products/avocado1.png"
+  },
+  {
+    title: "Custard Apple",
+    description: "Exotic custard apple pulp.",
+    image: "/products/custard-apple1.png"
   },
 ];
 
@@ -903,55 +1094,11 @@ export default function InfiniteMenu({
 }) {
   const canvasRef = useRef(null);
   const sketchRef = useRef(null);
+  const resizeObserverRef = useRef(null);
 
   const [activeItem, setActiveItem] = useState(null);
   const [isMoving, setIsMoving] = useState(false);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    let sketch;
-
-    const usedItems = items?.length ? items : defaultItems;
-
-    const handleActiveItem = (index) => {
-      const itemIndex = index % usedItems.length;
-      setActiveItem(usedItems[itemIndex]);
-    };
-
-    sketch = new InfiniteGridMenu(
-      canvas,
-      usedItems,
-      handleActiveItem,
-      setIsMoving,
-      (sk) => sk.run(),
-      scale
-    );
-
-    sketchRef.current = sketch;
-
-    const handleResize = () => sketch?.resize();
-    window.addEventListener("resize", handleResize);
-    handleResize();
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      sketch?.stop();
-      sketchRef.current = null;
-    };
-  }, [items, scale]);
-
-  const handleButtonClick = () => {
-    if (!activeItem?.link) return;
-
-    if (activeItem.link.startsWith("http")) {
-      window.open(activeItem.link, "_blank");
-    } else {
-      const el = document.querySelector(activeItem.link);
-      el?.scrollIntoView({ behavior: "smooth" });
-    }
-  };
+  const [imagesLoaded, setImagesLoaded] = useState(false);
 
   const titleColors = {
     Mango: "#D1C81F",
@@ -961,6 +1108,73 @@ export default function InfiniteMenu({
     Avocado: "#2F6B2F",
     "Custard Apple": "#2F5F1E",
   };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let sketch;
+
+    const init = () => {
+      if (!canvas || canvas.clientWidth === 0 || canvas.clientHeight === 0) {
+        return;
+      }
+
+      const usedItems = items && items.length ? items : defaultProducts;
+
+      const handleActiveItem = (index) => {
+        const itemIndex = index % usedItems.length;
+        setActiveItem(usedItems[itemIndex]);
+      };
+
+      sketch = new InfiniteGridMenu(
+        canvas,
+        usedItems,
+        handleActiveItem,
+        setIsMoving,
+        (sk) => {
+          if (sk && sk.gl) {
+            sk.run();
+          }
+        },
+        scale
+      );
+
+      sketchRef.current = sketch;
+    };
+
+    const timeoutId = setTimeout(init, 100);
+
+    resizeObserverRef.current = new ResizeObserver(() => {
+      if (sketchRef.current) {
+        sketchRef.current.resize();
+      }
+    });
+
+    resizeObserverRef.current.observe(canvas);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+      }
+      if (sketchRef.current) {
+        sketchRef.current.stop();
+        sketchRef.current = null;
+      }
+    };
+  }, [items, scale]);
+
+  useEffect(() => {
+    console.log("📋 Available images:", defaultProducts.map(p => p.image));
+    
+    defaultProducts.forEach(product => {
+      const img = new Image();
+      img.onload = () => console.log(`✅ ${product.image} exists and can be loaded`);
+      img.onerror = () => console.log(`❌ ${product.image} failed to load`);
+      img.src = product.image;
+    });
+  }, []);
 
   return (
     <div className={`relative w-full h-full ${className}`}>
@@ -975,15 +1189,15 @@ export default function InfiniteMenu({
             className={`
               select-none absolute
               left-1/2 -translate-x-1/2 text-center leading-none
-              top-[190px] w-[92%] max-w-[420px] text-[clamp(3.6rem,10vw,3.8rem)]
+              top-[250px] w-[92%] max-w-[420px] text-[clamp(3.6rem,10vw,3.8rem)]
               md:top-1/2 md:-translate-y-1/2 md:w-auto md:max-w-none
-              md:text-[clamp(4rem,2vw,7rem)] md:left-[5%] md:-translate-x-0 md:text-left
+              md:text-[clamp(3.4rem,2vw,7rem)] md:left-[5%] md:-translate-x-0 md:text-left
               transition-all ease-[cubic-bezier(0.25,0.1,0.25,1.0)]
               ${isMoving ? "opacity-0 pointer-events-none duration-[100ms]" : "opacity-100 pointer-events-auto duration-[500ms]"}
             `}
             style={{
               fontFamily: "Amanojaku",
-              color: titleColors?.[activeItem?.title] || "#111111",
+              color: titleColors[activeItem.title] || "#111111",
             }}
           >
             {activeItem.title}
@@ -992,9 +1206,9 @@ export default function InfiniteMenu({
           <p
             className={`
               select-none absolute left-1/2 -translate-x-1/2 text-center max-w-[28ch]
-              bottom-[170px] text-[clamp(1.4rem,3.5vw,2.25rem)]
+              bottom-[250px] text-[clamp(1.4rem,3.5vw,2.25rem)]
               md:bottom-auto md:top-1/2 md:-translate-y-1/2 md:left-auto md:right-[12%]
-              md:translate-x-0 md:text-right md:max-w-[30ch] md:text-[clamp(1.8rem,1.1vw,1.6rem)]
+              md:translate-x-0 md:text-right md:max-w-[30ch] md:text-[clamp(1.4rem,1.1vw,1.6rem)]
               transition-all ease-[cubic-bezier(0.25,0.1,0.25,1.0)]
               ${isMoving ? "opacity-0 pointer-events-none duration-[120ms] translate-y-6 md:translate-y-0" : "opacity-100 pointer-events-auto duration-[650ms] translate-y-0"}
             `}
@@ -1009,6 +1223,7 @@ export default function InfiniteMenu({
           </p>
         </>
       )}
+     
     </div>
   );
 }

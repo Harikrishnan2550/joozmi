@@ -1,7 +1,6 @@
   "use client";
 
   import InfiniteMenu from "@/components/animations/InfiniteMenu";
-  import Footer from "@/components/common/Footer";
   import { motion } from "framer-motion";
 
   /* ------------------------------------------------------------------ */
@@ -15,6 +14,7 @@ const products = [
   { title: "Avocado", description: "Smooth premium avocado pulp.", image: "/products/avocado1.png" },
   { title: "Custard Apple", description: "Exotic custard apple pulp.", image: "/products/custard-apple1.png" },
 ];
+
   
 
   /* ------------------------------------------------------------------ */
@@ -70,7 +70,7 @@ const products = [
         {/* ============================================================= */}
         {/* INFINITE MENU (YOUR OLD ANIMATION) */}
         {/* ============================================================= */}
-        <section className="relative h-[100svh]">
+        <section className="relative h-[110svh]">
           <InfiniteMenu items={products} scale={1.05} />
         </section>
 
