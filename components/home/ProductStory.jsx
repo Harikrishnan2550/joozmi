@@ -73,12 +73,12 @@ function ProductScene({ currentProduct }) {
     group.current.rotation.y = THREE.MathUtils.lerp(
       group.current.rotation.y,
       x,
-      0.06
+      0.06,
     );
     group.current.rotation.x = THREE.MathUtils.lerp(
       group.current.rotation.x,
       -y,
-      0.06
+      0.06,
     );
   });
 
@@ -216,14 +216,15 @@ function ProductSection({ product, index, totalProducts }) {
   const contentOpacity = useTransform(
     scrollYProgress,
     [0, 0.18, 0.75, 1],
-    [0, 1, 1, 0]
+    [0, 1, 1, 0],
   );
   const contentY = useTransform(scrollYProgress, [0, 1], [80, -80]);
 
   return (
     <section
       ref={sectionRef}
-      className="relative min-h-[100svh] flex items-start lg:items-center snap-start lg:snap-center pt-20 lg:pt-0"
+      className="relative min-h-[15svh] lg:min-h-[92svh]
+ flex items-start lg:items-center snap-start lg:snap-center pt-20 lg:pt-0"
     >
       <BackgroundText
         text={product.name}
@@ -237,7 +238,7 @@ function ProductSection({ product, index, totalProducts }) {
           className="grid lg:grid-cols-12 gap-10 items-center"
         >
           {/* LEFT TEXT */}
-          <div className="lg:col-span-6 text-center lg:text-left lg:pl-28 lg:mt-20">
+          <div className="lg:col-span-6 text-center lg:text-left lg:pl-28 mt-8 lg:mt-20">
             <div className="inline-flex items-center gap-3 mb-6 px-5 py-2 bg-white/80 backdrop-blur-xl rounded-full border border-black/10 shadow-sm">
               <span className="text-xs font-semibold tracking-[0.25em] text-black/55 uppercase">
                 Premium Fruit Pulp
@@ -350,7 +351,7 @@ export default function ProductStory({ products }) {
           }
         });
       },
-      { threshold: 0.55 }
+      { threshold: 0.55 },
     );
 
     sections.forEach((s) => io.observe(s));
@@ -366,7 +367,7 @@ export default function ProductStory({ products }) {
       ([entry]) => {
         setShowIndicator(entry.isIntersecting);
       },
-      { threshold: 0.15 }
+      { threshold: 0.15 },
     );
 
     io.observe(containerEl);
@@ -419,7 +420,10 @@ export default function ProductStory({ products }) {
       >
         <div className="absolute top-0 right-0 h-full w-[62%]">
           <Canvas dpr={[1, 2]} gl={{ antialias: true, alpha: true }}>
-            <ProductScene key={currentProduct.id} currentProduct={currentProduct} />
+            <ProductScene
+              key={currentProduct.id}
+              currentProduct={currentProduct}
+            />
           </Canvas>
         </div>
       </div>

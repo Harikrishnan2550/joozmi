@@ -71,7 +71,7 @@ export default function MountainRouteProcess() {
       />
 
       {/* HERO */}
-      <section className="relative min-h-screen flex items-center justify-center px-6 sm:px-10 lg:px-12 py-16 md:py-20 text-center">
+      <section className="relative mt-20 flex items-center justify-center px-6 sm:px-10 lg:px-12 py-16 md:py-20 text-center">
         <div className="max-w-5xl space-y-6 md:space-y-8">
           <motion.h1
             initial={{ opacity: 0, y: 80 }}
@@ -309,7 +309,7 @@ export default function MountainRouteProcess() {
       </section>
 
       {/* Philosophy */}
-      <section className="min-h-[60vh] md:min-h-screen flex items-center justify-center px-6 sm:px-10 lg:px-12 text-center py-16 md:py-20">
+      <section className="min-h-[20vh] md:min-h-[40vh] flex items-center justify-center px-6 sm:px-10 lg:px-12 text-center py-16 md:py-20">
         <motion.h2
           initial={{ opacity: 0, y: 60 }}
           whileInView={{ opacity: 1, y: 0 }}
