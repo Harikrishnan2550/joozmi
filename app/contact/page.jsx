@@ -120,20 +120,6 @@ export default function ContactPage() {
                   0492 323 59 82
                 </p>
               </div>
-
-              <div>
-                <p className="text-xs tracking-[0.25em] uppercase text-black/40">
-                  Website
-                </p>
-                <a
-                  href="https://www.joozmi.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1 inline-block font-semibold text-black hover:text-emerald-700 transition-colors"
-                >
-                  www.joozmi.com
-                </a>
-              </div>
             </div>
           </motion.div>
 
