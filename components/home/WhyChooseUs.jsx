@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 
 const FEATURES = [
   {
-    title: "100% Natural Pulp",
-    desc: "No artificial flavors. No preservatives. Just fruit—captured at peak ripeness.",
-    tag: "PURE",
+    title: "Freshly Frozen Fruit Pulp",
+    desc: "Carefully processed to maintain flavour, texture, and quality. Crafted for consistent performance in beverages and culinary creations.",
+    tag: "QUALITY",
   },
   {
     title: "Farm-to-Pack Freshness",
@@ -59,14 +59,13 @@ export default function WhyChooseUs() {
     <section id="choose" className="relative overflow-hidden py-24 sm:py-28">
       {/* ✅ PREMIUM MINT BACKGROUND (START WHITE -> GREEN -> END WHITE) */}
       <div className="pointer-events-none absolute inset-0 ">
-       <div
-  className="absolute inset-0"
-  style={{
-    background:
-             "linear-gradient(180deg, rgba(16,185,129,0.18) 0%, rgba(255,255,255,1) 55%, rgba(16,185,129,0.18) 100%)",
-  }}
-/>
-
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(16,185,129,0.18) 0%, rgba(255,255,255,1) 55%, rgba(16,185,129,0.18) 100%)",
+          }}
+        />
       </div>
 
       {/* ✅ keep orbs */}
@@ -110,8 +109,8 @@ export default function WhyChooseUs() {
             transition={{ duration: 0.95, ease: easePremium, delay: 0.05 }}
             className="mt-5 text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-black"
           >
-            Crafted for a{" "}
-            <span className="italic text-black/70">Premium</span> Experience
+            Crafted for a <span className="italic text-black/70">Premium</span>{" "}
+            Experience
           </motion.h2>
 
           <motion.p

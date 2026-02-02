@@ -41,7 +41,11 @@ export default function AboutImageStory() {
 
         {/* ✅ soft orbs (continuity effect) */}
         <motion.div
-          animate={{ x: [0, 35, 0], y: [0, 18, 0], opacity: [0.22, 0.35, 0.22] }}
+          animate={{
+            x: [0, 35, 0],
+            y: [0, 18, 0],
+            opacity: [0.22, 0.35, 0.22],
+          }}
           transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
           className="absolute -top-28 left-1/2 h-[560px] w-[560px] -translate-x-1/2 rounded-full blur-3xl"
           style={{ background: "rgba(16,185,129,0.10)" }}
@@ -179,16 +183,19 @@ export default function AboutImageStory() {
 
             {/* badges */}
             <div className="mt-10 flex flex-wrap gap-3">
-              {["100% Natural", "Zero Additives", "Premium QC", "Farm Direct"].map(
-                (tag) => (
-                  <span
-                    key={tag}
-                    className="px-4 py-2 rounded-full border border-black/10 bg-white/70 text-[10px] font-bold tracking-[0.25em] uppercase text-black/55 backdrop-blur-xl"
-                  >
-                    {tag}
-                  </span>
-                )
-              )}
+              {[
+                "Carefully Processed",
+                "Quality Assured",
+                "Premium QC",
+                "Selected Fruits",
+              ].map((tag) => (
+                <span
+                  key={tag}
+                  className="px-4 py-2 rounded-full border border-black/10 bg-white/70 text-[10px] font-bold tracking-[0.25em] uppercase text-black/55 backdrop-blur-xl"
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
           </motion.div>
         </div>

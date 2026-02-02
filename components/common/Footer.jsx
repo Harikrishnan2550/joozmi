@@ -68,22 +68,25 @@ export default function Footer() {
             </div>
 
             <p className="mt-6 text-sm leading-relaxed text-black/60 max-w-md">
-              Crafted from ripe premium fruits — processed hygienically to
-              preserve flavour, texture and freshness. Luxury taste in every sip.
+              Crafted from selected premium fruits and processed under hygienic
+              standards to maintain flavour, texture, and consistent quality.
+              Premium taste in every serving.
             </p>
 
             {/* badges */}
             <div className="mt-7 flex flex-wrap gap-3">
-              {["100% Natural", "Zero Additives", "Premium Quality"].map(
-                (tag) => (
-                  <span
-                    key={tag}
-                    className="px-4 py-2 rounded-full border border-black/10 bg-white/70 text-[10px] font-bold tracking-[0.25em] uppercase text-black/55 backdrop-blur-xl"
-                  >
-                    {tag}
-                  </span>
-                )
-              )}
+              {[
+                "Carefully Processed",
+                "Quality Assured",
+                "Premium Quality",
+              ].map((tag) => (
+                <span
+                  key={tag}
+                  className="px-4 py-2 rounded-full border border-black/10 bg-white/70 text-[10px] font-bold tracking-[0.25em] uppercase text-black/55 backdrop-blur-xl"
+                >
+                  {tag}
+                </span>
+              ))}
             </div>
           </motion.div>
 
@@ -204,7 +207,10 @@ export default function Footer() {
 
           {/* Right Side */}
           <div className="flex justify-center sm:justify-end items-center gap-6 text-xs tracking-[0.28em] uppercase text-black/45">
-            <Link href="/privacy" className="hover:text-black transition-colors">
+            <Link
+              href="/privacy"
+              className="hover:text-black transition-colors"
+            >
               Privacy
             </Link>
             <Link href="/terms" className="hover:text-black transition-colors">

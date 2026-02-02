@@ -21,26 +21,27 @@ const fadeInSlideUp = {
 
 const features = [
   {
-    id: "01",
-    title: "100% Natural",
-    description:
-      "Pure fruit pulp extraction with world-class hygienic processing standards.",
-    icon: (
-      <svg
-        className="w-6 h-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.5"
-          d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-        />
-      </svg>
-    ),
-  },
+  id: "01",
+  title: "Carefully Processed Fruit Pulp",
+  description:
+    "Prepared under hygienic and controlled processing standards to maintain flavour, texture, and consistent quality.",
+  icon: (
+    <svg
+      className="w-6 h-6"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+      />
+    </svg>
+  ),
+}
+,
   {
     id: "02",
     title: "Farm Direct",
@@ -203,88 +204,7 @@ export default function AboutSection() {
             ))}
           </motion.div>
         </div>
-
-        {/* 3. NEW: EXPANDING / FRUBOTTLE SECTION */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={containerVariants}
-          className="bg-white/70 backdrop-blur-xl rounded-[3rem] p-12 md:p-24 border border-emerald-200/40 relative overflow-hidden shadow-[0_40px_100px_-70px_rgba(16,185,129,0.45)]"
-        >
-          {/* Decorative Floating Circle */}
-          <div className="absolute -bottom-20 -right-20 w-64 h-64 blur-3xl rounded-full bg-emerald-200/25" />
-
-          <div className="grid lg:grid-cols-2 gap-16 items-center relative z-10">
-            <div>
-              <motion.h2
-                variants={fadeInSlideUp}
-                className="text-5xl md:text-7xl font-serif font-light text-emerald-900 leading-tight mb-8"
-              >
-                We are <br />{" "}
-                <span className="italic font-normal text-emerald-600">
-                  Expanding!
-                </span>
-              </motion.h2>
-
-              <motion.div
-                variants={fadeInSlideUp}
-                className="space-y-6 text-lg text-emerald-900/70 font-light leading-relaxed max-w-xl"
-              >
-                <p>
-                  Get ready for a taste revolution as Joozmi proudly unveils its
-                  new sub-brand,{" "}
-                  <strong className="font-semibold text-emerald-900">
-                    'Frubottle'
-                  </strong>
-                  !
-                </p>
-                <p>
-                  Delight in the essence of nature with our extensive range of{" "}
-                  <strong>14 distinct flavors</strong>, each crafted from the
-                  finest, handpicked fruits.
-                </p>
-                <p>
-                  From classic favorites to exotic blends, Frubottle promises a
-                  refreshing journey for your palate.
-                </p>
-              </motion.div>
-
-              <motion.div
-                variants={fadeInSlideUp}
-                className="mt-10 flex items-center gap-4"
-              >
-                <div className="h-[1px] w-12 bg-emerald-300" />
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">
-                  Freshness Meets Variety
-                </span>
-              </motion.div>
-            </div>
-
-            <motion.div
-              variants={fadeInSlideUp}
-              className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-2xl shadow-emerald-900/5 border border-emerald-100"
-            >
-              <p className="text-emerald-900/60 italic text-xl mb-6">
-                "Embrace the pure joy of natural fruit juices as we bring you a
-                symphony of flavors, bottled just for you."
-              </p>
-
-              <div className="flex flex-wrap gap-3">
-                {["14 Flavors", "Zero Added Sugar", "Cold Pressed", "Eco-Friendly"].map(
-                  (tag, i) => (
-                    <span
-                      key={i}
-                      className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                    >
-                      {tag}
-                    </span>
-                  )
-                )}
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
+        
       </div>
     </section>
   );
